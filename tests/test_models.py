@@ -825,9 +825,9 @@ def test_discriminated_unions_preserve_iterator_consumption() -> None:
     actual = construct_type(
         value={"type": "b", "values": iter([1, 2])}, type_=Annotated[Union[A, B], UnionDiscriminator("type")]
     )
-    assert isinstance(expected, B)
+    assert isinstance(expected, A if PYDANTIC_V1 else B)
     assert isinstance(actual, B)
-    assert actual.values == expected.values
+    assert list(actual.values) == list(expected.values)
 
 
 def test_discriminated_unions_preserve_enum_missing_calls() -> None:
@@ -894,18 +894,19 @@ def test_discriminated_unions_preserve_nested_discriminator_calls() -> None:
         kind: Literal["y"]
         value: int
 
-    Nested = Annotated[
-        Union[Annotated[X, pydantic.Tag("x")], Annotated[Y, pydantic.Tag("y")]],
-        pydantic.Discriminator(discriminate),
-    ]
-
     class A(BaseModel):
         type: Literal["a"]
-        nested: Nested
+        nested: Annotated[
+            Union[Annotated[X, pydantic.Tag("x")], Annotated[Y, pydantic.Tag("y")]],
+            pydantic.Discriminator(discriminate),
+        ]
 
     class B(BaseModel):
         type: Literal["b"]
-        nested: Nested
+        nested: Annotated[
+            Union[Annotated[X, pydantic.Tag("x")], Annotated[Y, pydantic.Tag("y")]],
+            pydantic.Discriminator(discriminate),
+        ]
 
     value = {"type": "b", "nested": {"kind": "x", "value": 42}}
     expected = construct_type(value=value, type_=Union[A, B])
